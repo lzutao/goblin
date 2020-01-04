@@ -1,32 +1,18 @@
-language: rust
-rust:
-  - 1.36.0
-  - stable
-  - beta
-  - nightly
-os:
-  - linux
-  - osx
-matrix:
-  fast_finish: true
-  allow_failures:
-    - rust: nightly
-
+dist: xenial
+language: shell
+cache:
+  - $HOME/.cargo
+before_cache:
+  - cargo install --debug --git https://github.com/matthiaskrgr/cargo-cache \
+      --no-default-features --features ci-autoclean \
+      --bin cargo-cache -- cargo-cache
+  - cargo cache
+install:
+  - MIRI_NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/miri)
+  - curl -sSf https://sh.rustup.rs | sh -s -- -y --profile=minimal --default-toolchain="${MIRI_NIGHTLY}" -c miri
+  - export PATH="$HOME/.cargo/bin:$PATH"
+  - cargo miri setup
 script:
-  - cargo build --verbose
-  - cargo test --verbose
-  - cargo build --release
-  - cargo test --release
   - make api
-before_deploy:
-  - cargo doc --no-deps
-  - echo '<meta http-equiv=refresh content=0;url=goblin/index.html>' > target/doc/index.html;
-deploy:
-  - provider: pages
-    skip-cleanup: true
-    local-dir: target/doc
-    github-token: "$GITHUB_OAUTH_TOKEN"
-    keep-history: false
-    on:
-      branch: master
-      condition: $TRAVIS_OS_NAME = "linux" && $TRAVIS_RUST_VERSION = "stable"
+  - cargo clean
+  - cargo miri test

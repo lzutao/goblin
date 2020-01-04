@@ -61,6 +61,7 @@ fn get_libgoblin_rlib() -> PathBuf {
 
 // Cannot run this on Windows because *.rlib type on Windows is unknown
 #[cfg(not(windows))]
+#[cfg(not(miri))]
 #[test]
 fn parse_self() {
     let path = get_libgoblin_rlib();
