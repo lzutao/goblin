@@ -1,7 +1,8 @@
 dist: xenial
 language: shell
 cache:
-  - $HOME/.cargo
+  directories:
+    - $HOME/.cargo
 before_cache:
   - cargo install --debug --git https://github.com/matthiaskrgr/cargo-cache \
       --no-default-features --features ci-autoclean \
