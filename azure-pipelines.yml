@@ -1,0 +1,53 @@
+trigger:
+  branches:
+    include: ['*']
+    exclude: ['gh-pages']
+  tags:
+    exclude: ['*']
+
+jobs:
+  - job: 'Windows'
+    pool:
+      vmImage: vs2017-win2016
+    variables:
+      MINGW_URL: https://ci-mirrors.rust-lang.org/rustc
+      #RUSTFLAGS: -Ctarget-feature=+crt-static
+      RUST_BACKTRACE: 1
+    strategy:
+      matrix:
+        x86_64-windows-msvc:
+          TARGET: x86_64-pc-windows-msvc
+        #i686-windows-msvc:
+        #  TARGET: i686-pc-windows-msvc
+    steps:
+      - powershell: Set-MpPreference -DisableRealtimeMonitoring $true
+        displayName: Disable Windows Defender
+      - bash: ci/install-rustup.bash stable
+        displayName: Install Rustup
+      - bash: ci/install-rust.bash stable '$(TARGET)'
+        displayName: Install Rust
+      - bash: ci/install-mingw.bash
+        displayName: Check out MinGW toolchain
+        condition: and(succeeded(), variables['MINGW_DIR'])
+      - script: cargo build -v --all --all-targets --all-features
+      - script: cargo test -v -- --nocapture
+
+  - job: 'Clippy'
+    pool:
+      vmImage: vs2017-win2016
+    # dependsOn: Windows
+    steps:
+      - powershell: Set-MpPreference -DisableRealtimeMonitoring $true
+        displayName: Disable Windows Defender
+      - bash: ci/install-rustup.bash stable
+        displayName: Install Rustup
+      - bash: ci/install-rust.bash stable
+        displayName: Install Rust
+      - script: rustup component add clippy
+        displayName: Install clippy
+        condition: succeeded()
+      - script: cargo check --all --all-targets
+      - bash: git ls-files '*.rs' | xargs touch
+      - script: cargo clippy --all --all-targets -- -Dwarnings
+        displayName: Run Clippy
+        condition: succeeded()
